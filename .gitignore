@@ -6,11 +6,12 @@ Data/kaggle.json
 
 # Ignore EVERYTHING inside Data/
 Data/*
-
-vitfinalproject/*
-
-# …except these marker files so the folder exists in the repo
 !Data/.gitkeep
 !Data/README.md
-# Weights: keep folder, ignore contents
+
+# Ignore your venv (good you added this)
+vitfinalproject/*
+
+# Weights: ignore all contents of the folder, keep folder itself
 notebooks/weights/*
+!notebooks/weights/.gitkeep
