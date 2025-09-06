@@ -14,3 +14,5 @@ vitfinalproject/*
 # Weights: ignore contents, keep folder marker
 notebooks/weights/*
 !notebooks/weights/.gitkeep
+!notebooks/weights/README.md
+ 
