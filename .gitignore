@@ -1,17 +1,16 @@
-# macOS cruft
 .DS_Store
 
-# Kaggle creds (never commit secrets)
+# Kaggle creds
 Data/kaggle.json
 
-# Ignore EVERYTHING inside Data/
+# Datasets: ignore contents, keep folder with markers
 Data/*
 !Data/.gitkeep
 !Data/README.md
 
-# Ignore your venv (good you added this)
+# venv (your local env)
 vitfinalproject/*
 
-# Weights: ignore all contents of the folder, keep folder itself
+# Weights: ignore contents, keep folder with marker
 notebooks/weights/*
 !notebooks/weights/.gitkeep
