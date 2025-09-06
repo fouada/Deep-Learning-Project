@@ -1,1 +1,14 @@
+# macOS cruft
 .DS_Store
+
+# Kaggle creds (never commit secrets)
+Data/kaggle.json
+
+# Ignore EVERYTHING inside Data/
+Data/*
+
+vitfinalproject/*
+
+# …except these marker files so the folder exists in the repo
+!Data/.gitkeep
+!Data/README.md
