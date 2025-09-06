@@ -12,3 +12,5 @@ vitfinalproject/*
 # …except these marker files so the folder exists in the repo
 !Data/.gitkeep
 !Data/README.md
+# Weights: keep folder, ignore contents
+notebooks/weights/*
