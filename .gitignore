@@ -3,14 +3,14 @@
 # Kaggle creds
 Data/kaggle.json
 
-# Datasets: ignore contents, keep folder with markers
+# Data: ignore contents, keep folder markers
 Data/*
 !Data/.gitkeep
 !Data/README.md
 
-# venv (your local env)
+# Local venv
 vitfinalproject/*
 
-# Weights: ignore contents, keep folder with marker
+# Weights: ignore contents, keep folder marker
 notebooks/weights/*
 !notebooks/weights/.gitkeep
