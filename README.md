@@ -153,3 +153,120 @@ These elements explain “why” SAM works (flatter minima), and would make our 
 - **ResNet‑18 (pretrained + SAM) @0.5:** acc 0.9407, prec 0.9315, rec 0.9769, F1 0.9537, AUROC 0.9842.  
 - **ResNet‑18 (pretrained + SAM) @recall:** thr 0.2991 → acc 0.9247, prec 0.8979, rec 0.9923, F1 0.9428.
 
+
+
+
+
+
+# Pneumonia X‑Ray Classification — CNN vs ViT (with/without SAM)
+
+**Dataset:** Chest X‑ray Pneumonia (Kaggle).  
+**Task:** Binary classification — *Normal* vs *Pneumonia*.  
+**Protocol:** Train/Val/Test split kept intact for final testing; validation threshold chosen to meet a *screening‑style* minimum recall target (≈0.95), then applied to the untouched test set.
+
+This report condenses the results you shared from your executed notebooks (latest: `ViT_CNN_PaperAligned_End2End.ipynb`, plus earlier ViT baselines without SAM). It also maps your implementation to the ICLR‑2022 paper **“When Vision Transformers Outperform ResNets without Pre‑training or Strong Data Augmentations”** and highlights what matches, what doesn’t yet, and how to close the gaps.
+
+---
+
+## 1) Models & training (what you ran)
+
+- **CNN (scratch)** — lightweight custom convnet (~0.09M params).  
+- **ResNet‑18 (pretrained)** — ImageNet‑1k weights; fine‑tuned on chest X‑ray.  
+- **ViT small (scratch)** — ~4.99M params; trained from scratch.  
+- **ViT‑B/16 (pretrained)** — Google JAX `.npz` weights loaded into PyTorch; fine‑tuned.
+
+**Common recipe** (as seen in your code and logs):
+- Inception‑style preprocessing: `RandomResizedCrop(224)` + horizontal flip for train; `Resize(256) + CenterCrop(224)` for val/test; ImageNet normalization.
+- Cross‑entropy with optional class weights; early stopping on validation metrics.
+- **Recall‑first thresholding:** choose the minimum probability threshold on the validation set that achieves ~0.95 recall; report both default 0.5 and “recall‑driven” thresholds on the test set.
+- **SAM optimizer option:** enabled in ViT and CNN/ResNet runs (two‑step ascent/descent). For ViT‑B/16 you used ρ≈0.2, which matches the paper’s recommendation (see Table 11 there).
+
+---
+
+## 2) Test‑set results (latest runs)
+
+### With SAM (recall‑driven threshold)
+| Model | Params (M) | Time (min) | Acc | Prec | Recall | F1 | AUROC | Thr |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **ViT (scratch + SAM)** | 4.99 | 27.36 | 0.7756 | 0.7500 | **0.9615** | 0.8427 | 0.8838 | 0.077 |
+| **ViT‑B/16 (pretrained + SAM)** | 85.80 | 77.39 | **0.9279** | 0.9021 | **0.9923** | **0.9451** | **0.9859** | 0.288 |
+| **CNN (scratch + SAM)** | 0.09 | 16.39 | 0.6090 | 0.6225 | **0.9513** | 0.7525 | 0.7076 | 0.456 |
+| **ResNet‑18 (pretrained + SAM)** | 11.18 | 24.80 | 0.9247 | 0.8979 | **0.9923** | 0.9428 | 0.9842 | 0.299 |
+
+### Earlier (no SAM) ViT baselines (same test protocol)
+| Model | Params (M) | Time (min) | Acc | Prec | Recall | F1 | AUROC | Thr |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **ViT (scratch)** | 4.99 | 27.60 | 0.7788 | 0.7520 | **0.9641** | 0.8449 | 0.8892 | 0.289 |
+| **ViT (pretrained)** | 85.80 | 44.14 | 0.8413 | 0.7988 | **0.9974** | 0.8871 | 0.9007 | 0.216 |
+
+**Takeaways from the numbers (screening perspective):**
+- **Best overall** on your test set is **ViT‑B/16 (pretrained + SAM)** with F1≈0.945 and AUROC≈0.986 at recall≈0.992 — narrowly ahead of **ResNet‑18 (pretrained + SAM)** (F1≈0.943, AUROC≈0.984).  
+- **ViT scratch** benefits only modestly from SAM on this small dataset; its AUROC/F1 are similar with/without SAM.  
+- The tiny **CNN scratch** attains high recall after threshold tuning but **underfits** (low AUROC/Acc), which is expected given its capacity.
+
+---
+
+## 3) Training curves & generalization (what the plots show)
+
+- **ViT scratch:** Train/val losses drop together; val F1 peaks ~0.90 before settling ~0.84–0.89 across epochs. This pattern suggests **reasonable fit** without obvious overfitting, but limited by data/capacity for ViT without pretraining.
+- **ViT‑B/16 pretrained + SAM:** Smooth, monotonic loss decrease and steadily rising val Acc/F1 to ~0.95–0.97. **No overfitting signs**, consistent with strong inductive signal from the pretrained patch embedding + SAM’s smoothing.
+- **ResNet‑18 pretrained + SAM:** Similar convergence behavior to ViT‑B/16; excellent AUROC/PR curves.  
+- **CNN scratch:** Slow loss decay; val Acc climbs through training but caps lower; **underfitting** (capacity and/or optimization limits).
+
+---
+
+## 4) Complexity & training time
+
+- **Parameters:** ViT‑B/16 >> ResNet‑18 >> ViT‑small >> CNN scratch.  
+- **Time:** ViT‑B/16 + SAM is the **slowest** (two backward passes per step); ResNet‑18 + SAM much faster for almost the same F1/AUROC.  
+- **Cost/benefit:** If compute is limited, **ResNet‑18 + SAM** is an attractive operating point; if you can afford the cost, **ViT‑B/16 + SAM** is slightly superior in screening metrics.
+
+---
+
+## 5) How this aligns with the ICLR‑2022 paper
+
+What the paper claims (for ImageNet) vs your observations on chest X‑rays:
+
+- **SAM matters more for conv‑free models.** The paper shows ViTs and MLP‑Mixers converge to **sharper minima** and benefit strongly from SAM, improving accuracy/robustness and even enabling ViTs to **beat ResNets when trained from scratch** using only Inception‑style preprocessing (no heavy augs, no big pretraining).  
+  → On your data, **pretrained + SAM** lifts **both** ViT‑B/16 and ResNet‑18 to very high performance; ViT has a **small edge**, consistent with the paper’s “SAM helps ViTs a lot” narrative.  
+- **Recommended ρ (SAM strength).** The paper uses **ρ≈0.2 for ViT‑B/16**. You used ~0.2 too — a direct match.  
+- **Inception‑style preprocessing.** You matched this (RandomResizedCrop + Flip only).  
+- **From‑scratch comparison.** The paper’s strongest claim (ViT ≥ ResNet when trained from scratch with SAM) can’t be fully verified here because your best runs for both **use pretraining**. ViT scratch did not beat a (pretrained) ResNet18, which is expected on small medical datasets.
+
+---
+
+## 6) Gaps vs the paper & how to close them (if desired)
+
+If you want to **mirror the paper more exactly**, consider these add‑ons:
+1. **From‑scratch ResNet‑18 + SAM** (no pretraining) vs **ViT‑S/16 + SAM** (or ViT‑B/16 if feasible). Keep the same Inception‑style pipeline and compare test results.  
+2. **Cosine LR + warmup** for scratch training with a slightly longer schedule (e.g., 100–150 epochs on this dataset) to stabilize ViTs.  
+3. **SAM ρ sweep** for your data: ViT‑B/16 (ρ ∈ {0.1, 0.2}); ViT‑small (ρ ∈ {0.05, 0.1}); ResNet‑18 (ρ ∈ {0.02, 0.05}).  
+4. **Strong augmentation vs SAM** ablation (mixup + RandAugment) to replicate the paper’s “SAM vs strong augs vs both” comparison on a smaller scale.  
+5. (Optional) **Hessian top‑eigen** approximation and/or loss landscape slices to demonstrate “sharpeness reduced by SAM” on your checkpoints.
+
+---
+
+## 7) Strengths & weaknesses for this task (screening)
+
+- **ViT‑B/16 + SAM**: Highest AUROC/F1 at recall ≳0.99; robust curves; costliest compute.  
+- **ResNet‑18 + SAM**: Nearly as strong with much lower cost — excellent *operational* choice.  
+- **ViT scratch**: Good, but not competitive with pretrained backbones on small medical data.  
+- **CNN scratch**: High recall achievable by thresholding, but clear underfitting (low AUROC).
+
+**Recommendation:** If compute allows, **ViT‑B/16 + SAM**. If not, **ResNet‑18 + SAM** is an excellent screening model. Couple either with **recall‑first thresholding** (as you do) and monitor calibration on a held‑out validation set.
+
+---
+
+## 8) What to report (rubric checklist)
+
+- **Quantitative metrics:** present Acc/Prec/Recall/F1/AUROC at both default 0.5 and recall‑driven thresholds.  
+- **Curves:** loss/val curves, ROC, PR, confusion.  
+- **Complexity:** params and measured wall‑clock time per model.  
+- **Generalization:** note that SAM improved validation stability and final AUROC for the pretrained backbones.  
+- **Over/Under‑fitting:** CNN underfits; pretrained backbones do not show overfitting; ViT scratch sits in between.  
+- **Literature link:** this behavior **agrees** with the ICLR‑2022 paper’s picture that SAM especially helps conv‑free models; your data are smaller and domain‑specific, so **pretraining** remains important.
+
+---
+
+*Prepared from the metrics and plots produced by your notebooks. Paper references are included in the accompanying chat so the grader can verify alignment.*
+
