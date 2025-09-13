@@ -1,16 +1,37 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 @dataclass
 class DataCfg:
     dataset_dir: Path
     image_size: int = 224
-    use_stratified_val: bool = True
-    stratified_val_size: float = 0.15
     batch_size: int = 32
     num_workers: int = 0
     pin_memory: bool = True
+
+    # fouad start change: add options used by notebooks
+    use_stratified_val: bool = True
+    stratified_val_size: float = 0.15
+    val_ratio: Optional[float] = None          # alias for stratified_val_size
+    compute_norm_stats: bool = False           # compute mean/std from train/
+    gray_to_rgb: bool = True                   # convert grayscale images to 3ch
+    balance_sampler: bool = False              # WeightedRandomSampler on training set
+    # fouad end change
+
+    def __post_init__(self):
+        # fouad start change: honor alias and make MPS pin_memory-safe
+        if self.val_ratio is not None:
+            self.stratified_val_size = float(self.val_ratio)
+        try:
+            import torch
+            if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+                self.pin_memory = False
+        except Exception:
+            pass
+        # fouad end change
+
 
 @dataclass
 class TrainCfg:

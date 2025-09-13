@@ -72,20 +72,17 @@ def build_optimizer(model, arch: str, base_lr: float, weight_decay: float,
     """
     params = model.parameters()
     if arch in ["resnet18", "custom_cnn"]:
-        # default SGD for CNNs
         base_opt = SGD
         lr = base_lr if base_lr is not None else 0.1
         wd = weight_decay if weight_decay is not None else 1e-3
         kwargs = dict(lr=lr, momentum=0.9, weight_decay=wd)
         return SAM(params, base_opt, rho=sam_rho, **kwargs) if use_sam else base_opt(params, **kwargs)
 
-    # ViT
     base_opt = AdamW
     lr = base_lr if base_lr is not None else 3e-4
     wd = weight_decay if weight_decay is not None else 0.3
 
     if llrd:
-        # Head gets larger LR
         head = []
         body = []
         for n, p in model.named_parameters():

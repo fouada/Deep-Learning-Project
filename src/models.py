@@ -7,6 +7,8 @@ Models:
 """
 from __future__ import annotations
 from typing import Optional
+from pathlib import Path
+
 import torch, torch.nn as nn, torch.nn.functional as F
 from torchvision import models as tv_models
 
@@ -26,7 +28,6 @@ class CustomCNN(nn.Module):
       Stem: 3x3 conv
       Stages: (32)->(64)->(128)
       GlobalAvgPool + 2-way head
-    ~0.1–0.5M params depending on width.
     """
     def __init__(self, num_classes=2, width=32, dropout=0.0):
         super().__init__()
@@ -57,10 +58,8 @@ def build_custom_cnn(num_classes=2, width=32, dropout=0.0) -> nn.Module:
 def build_resnet18(in_chans=3, num_classes=2, pretrained=False, conv_stem=False) -> nn.Module:
     m = tv_models.resnet18(weights=tv_models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
     if in_chans != 3:
-        # replace stem conv to accept non-3 channels (kept 3 in data)
         m.conv1 = nn.Conv2d(in_chans, 64, kernel_size=7, stride=2, padding=3, bias=False)
     if conv_stem:
-        # optional: 3x3 conv stem
         m.conv1 = nn.Conv2d(in_chans, 64, kernel_size=3, stride=2, padding=1, bias=False)
     m.fc = nn.Linear(m.fc.in_features, num_classes)
     m.num_classes = num_classes
@@ -154,18 +153,23 @@ def build_vit_scratch(img_size=224, in_chans=3, num_classes=2, embed_dim=384, de
 def build_vit_pretrained(num_classes=2, model_name="vit_base_patch16_224", pretrained=True, npz_path: Optional[str] = None):
     """
     Preferred: timm.create_model('vit_base_patch16_224', pretrained=True)
-    Fallback: if npz_path provided, build compatible ViT-B/16 and load Google .npz weights.
+    Fallback: if npz_path provided or notebooks/weights/ViT-B_16.npz exists,
+              build compatible ViT-B/16 and load Google .npz weights.
     """
+    # fouad start change: adopt the project weights path if present
+    default_npz = Path(__file__).resolve().parents[1] / "notebooks" / "weights" / "ViT-B_16.npz"
+    if npz_path is None and default_npz.exists():
+        npz_path = str(default_npz)
+    # fouad end change
+
     try:
         import timm
-        if pretrained:
-            m = timm.create_model(model_name, pretrained=True, num_classes=num_classes)
-        else:
-            m = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
+        m = timm.create_model(model_name, pretrained=pretrained, num_classes=num_classes)
         m.num_classes = num_classes
         return m
     except Exception:
         pass
+
     if npz_path is not None:
         from .vit_npz_loader import load_jax_vit_npz_into_pytorch
         m = VisionTransformer(img_size=224, in_chans=3, num_classes=num_classes,
@@ -173,3 +177,8 @@ def build_vit_pretrained(num_classes=2, model_name="vit_base_patch16_224", pretr
         m = load_jax_vit_npz_into_pytorch(m, npz_path)
         return m
     raise RuntimeError("ViT pretrained requested but neither timm nor npz weights are available.")
+
+
+# fouad start change: alias for convenience with your notebooks
+build_vit_b16_pretrained = build_vit_pretrained
+# fouad end change

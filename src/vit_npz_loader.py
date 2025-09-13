@@ -54,7 +54,7 @@ def load_jax_vit_npz_into_pytorch(model, npz_path: str | Path):
         bv = _get_any(w, [f'Transformer/encoderblock_{i}/MultiHeadDotProductAttention_1/value/bias'])
 
         def flatten_qkv(W, b):
-            if W.ndim == 3: W = W.reshape(W.shape[0], -1)  # [D, H*Hd]
+            if W.ndim == 3: W = W.reshape(W.shape[0], -1)
             return W, b.reshape(-1)
 
         Wq, bq = flatten_qkv(Wq, bq); Wk, bk = flatten_qkv(Wk, bk); Wv, bv = flatten_qkv(Wv, bv)

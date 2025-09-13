@@ -11,7 +11,6 @@ class _NoOpScaler:
 
 def _make_scaler():
     if torch.cuda.is_available():
-        # new API
         try:
             return torch.amp.GradScaler('cuda')
         except Exception:
@@ -43,15 +42,10 @@ def train_model(model, train_loader, val_loader, device, *, arch: str,
                 use_cosine: bool, warmup_epochs: int, min_lr_mult: float,
                 monitor: str, patience: int, clip_grad_norm: float,
                 class_weights=None, llrd=False, head_lr_mult=10.0, use_amp=False, tag: str = "model"):
-    """
-    Generic trainer used for CustomCNN, ResNet18, ViT.
-    Returns: (best_model, history_dict, time_sec)
-    """
+
     model = model.to(device)
-    # AFTER (robust)
     cw = class_weights.to(device) if class_weights is not None else None
     loss_fn = nn.CrossEntropyLoss(weight=cw, label_smoothing=float(label_smoothing) if label_smoothing else 0.0)
-
 
     optimizer = build_optimizer(model, arch, base_lr, weight_decay,
                                 use_sam=use_sam, sam_rho=(sam_rho or 0.05),
@@ -117,7 +111,6 @@ def train_model(model, train_loader, val_loader, device, *, arch: str,
                 pred = logits.argmax(dim=1)
                 correct += (pred == yb).sum().item(); n += yb.numel()
 
-        import numpy as np
         from sklearn.metrics import f1_score, roc_auc_score
         probs = np.concatenate(probs); targs = np.concatenate(targs)
         va_acc = correct / max(1, n)
