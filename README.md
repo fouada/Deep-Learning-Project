@@ -19,34 +19,45 @@ You can run:
 
 ---
 
-## One‑table guide — TrainCfg knobs, purpose, and recommended values per model
+# Hyperparameter tables
 
-> Values below match what ran stably in your notebooks on this dataset size. Use them as **defaults**; tune if you change batch size / augmentations.
+## SAM **ON**
 
-| **Parameter** | **What it controls / Why** | **CustomCNN (scratch+SAM)** | **ResNet‑18 (scratch+SAM)** | **ResNet‑18 (pretrained+SAM)** | **ViT‑B/16 (scratch+SAM)** | **ViT‑B/16 (pretrained+SAM)** |
-|---|---|---:|---:|---:|---:|---:|
-| `epochs` | Max training epochs; early‑stopping ends sooner when `monitor` stalls. | **100** | **90** | **20** | **120** | **20** |
-| `base_lr` | Base LR for optimizer; head LR = `base_lr × head_lr_mult` when used. | **3e‑4** | **3e‑4** | **1e‑4** | **3e‑4** | **1e‑4** |
-| `weight_decay` | L2/AdamW decay; regularizes weights. | **1e‑4** | **1e‑4** | **1e‑4** | **1e‑4** | **1e‑4** |
-| `label_smoothing` | Softens targets; can stabilize but may blur decision boundary; set 0 for clean comparison. | **0.0** | **0.0** | **0.0** | **0.0** | **0.0** |
-| `use_sam` | Toggle Sharpness‑Aware Minimization. | **True** | **True** | **True** | **True** | **True** |
-| `sam_rho` | SAM perturbation radius (ρ). **Small for CNN/ResNet**; **larger for ViT**. | **0.05** | **0.05** | **0.05** | **0.20** | **0.20** |
-| `use_cosine` | Cosine LR decay after warmup. | **True** | **True** | **True** | **True** | **True** |
-| `warmup_epochs` | LR warmup to avoid early instabilities. | **2** | **2** | **2** | **2** | **2** |
-| `min_lr_mult` | Minimum LR as a fraction of `base_lr` (final LR = `min_lr_mult × base_lr`). | **0.05** | **0.05** | **0.05** | **0.05** | **0.05** |
-| `monitor` | Metric to track for early‑stopping / best‑ckpt. Use AUROC for imbalanced medical data. | `"va_auroc"` | `"va_auroc"` | `"va_auroc"` | `"va_auroc"` | `"va_auroc"` |
-| `patience` | Epochs with no improvement in `monitor` before stopping. | **15** | **15** | **5** | **15** | **5** |
-| `clip_grad_norm` | Gradient global‑norm clip; prevents spikes. | **1.0** | **1.0** | **1.0** | **1.0** | **1.0** |
-| `class_weights` | Per‑class weights for loss (handles imbalance); compute from train counts: `w_i = N/(K·(n_i+ε))`. | **use** | **use** | **use** | **use** | **use** |
-| `llrd` | Layer‑wise LR decay for backbones (larger LR for head, smaller for deeper blocks). | **False** | **False** | **False** | **False** | **True** |
-| `head_lr_mult` | Multiplier for classifier head LR; speeds head when fine‑tuning. | **1.0** | **1.0** | **10.0** | **1.0** | **10.0** |
-| `use_amp` | Automatic Mixed Precision; speeds training if hardware supports. | **False** (safe) | **False** | **False** | **False** | **False** |
+| Model             | Init       |   epochs |   base_lr |   weight_decay |   label_smoothing | use_cosine   |   warmup_epochs |   min_lr_mult | monitor   |   patience |   clip_grad_norm | class_weights   | llrd   |   head_lr_mult | use_amp   |   sam_rho |   target_recall |
+|:------------------|:-----------|---------:|----------:|---------------:|------------------:|:-------------|----------------:|--------------:|:----------|-----------:|-----------------:|:----------------|:-------|---------------:|:----------|----------:|----------------:|
+| CustomCNN         | Scratch    |      100 |    0.1    |         0.001  |                 0 | True         |               3 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |              1 | False     |      0.02 |            0.95 |
+| ResNet18          | Scratch    |       90 |    0.1    |         0.001  |                 0 | True         |               3 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |              1 | False     |      0.05 |            0.95 |
+| ViT (scratch cfg) | Scratch    |      120 |    0.0003 |         0.3    |                 0 | True         |               5 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |             10 | False     |      0.2  |            0.95 |
+| ResNet18          | Pretrained |       20 |    0.0001 |         0.0001 |                 0 | True         |               2 |          0.05 | va_auroc  |          5 |                1 | Yes             | False  |              1 | False     |      0.05 |            0.95 |
+| ViT‑B/16          | Pretrained |       20 |    0.0001 |         0.0001 |                 0 | True         |               2 |          0.05 | va_auroc  |          5 |                1 | Yes             | True   |             10 | False     |      0.2  |            0.95 |
 
-**Notes**
-- The **ρ choices** reflect best practices: **ResNets/CNNs** favor **ρ≈0.02–0.05**, while **ViT‑B/16** benefits from **ρ≈0.2**.  
-- Keep `patience=5` for pretrained fine‑tuning (backbone already near a good basin); use **longer patience** for scratch.
-- If you enable **strong data augmentations**, you may reduce ViT’s `sam_rho` (e.g., ≈0.05–0.1) because augmentations already smooth the loss.
-- `llrd=True` only for **ViT‑B/16 (pretrained)** in this repo; it’s unnecessary for scratch or for ResNet‑18 here.
+## SAM **OFF**
+
+| Model             | Init       |   epochs |   base_lr |   weight_decay |   label_smoothing | use_cosine   |   warmup_epochs |   min_lr_mult | monitor   |   patience |   clip_grad_norm | class_weights   | llrd   |   head_lr_mult | use_amp   |   target_recall |
+|:------------------|:-----------|---------:|----------:|---------------:|------------------:|:-------------|----------------:|--------------:|:----------|-----------:|-----------------:|:----------------|:-------|---------------:|:----------|----------------:|
+| CustomCNN         | Scratch    |      100 |    0.1    |         0.001  |                 0 | True         |               3 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |              1 | False     |            0.95 |
+| ResNet18          | Scratch    |       90 |    0.1    |         0.001  |                 0 | True         |               3 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |              1 | False     |            0.95 |
+| ViT (scratch cfg) | Scratch    |      120 |    0.0003 |         0.3    |                 0 | True         |               5 |          0.01 | va_auroc  |         15 |                1 | Yes             | False  |             10 | False     |            0.95 |
+| ResNet18          | Pretrained |       20 |    0.0001 |         0.0001 |                 0 | True         |               2 |          0.05 | va_auroc  |          5 |                1 | Yes             | False  |              1 | False     |            0.95 |
+| ViT‑B/16          | Pretrained |       20 |    0.0001 |         0.0001 |                 0 | True         |               2 |          0.05 | va_auroc  |          5 |                1 | Yes             | True   |             10 | False     |            0.95 |
+
+### Parameter quick reference
+- **epochs** – total training epochs before early stopping.
+- **base_lr** – initial learning rate used by the scheduler.
+- **weight_decay** – L2 regularization (AdamW style for ViT).
+- **label_smoothing** – softens hard labels; leave at 0.0 for medical binary tasks unless overconfident.
+- **use_cosine** – cosine LR decay; smooth convergence.
+- **warmup_epochs** – epochs to linearly ramp LR up from 0 → base_lr.
+- **min_lr_mult** – LR floor as a fraction of base_lr in cosine schedule.
+- **monitor** – validation metric for early stopping/best checkpoint.
+- **patience** – epochs to wait with no improvement before stopping.
+- **clip_grad_norm** – global gradient norm cap to stabilize training.
+- **class_weights** – rebalance loss for class imbalance (Yes = use).
+- **llrd** – layer-wise LR decay (usually only for ViT when fine‑tuning).
+- **head_lr_mult** – LR multiplier for the classifier head (useful with llrd).
+- **use_amp** – mixed precision; speeds up training on GPUs that support it.
+- **sam_rho** – neighborhood radius for Sharpness‑Aware Minimization (only in *SAM ON* table).
+- **target_recall** – recall used when choosing the operating threshold after training.
 
 
 ---
