@@ -101,7 +101,7 @@ notebooks/
 - **Optimizers**:  
   - **CNN/ResNet scratch** → **SGD (mom=0.9)** with `base_lr≈0.05–0.1`, `weight_decay≈1e‑3`.  
   - **ViT scratch** → **AdamW** with `base_lr≈3e‑4`, `weight_decay≈0.1–0.3`.
-- **Sharpness‑Aware Minimization (SAM)** (scratch notebooks that enable it): **ρ** set per model (ViT benefits from larger ρ, e.g., **0.2**; CNN/ResNet prefer smaller, e.g., **0.02–0.05**). SAM improves **loss‑landscape smoothness** and typically **helps ViT most** on small‑/medium‑scale supervised tasks. fileciteturn2file0 fileciteturn2file10
+- **Sharpness‑Aware Minimization (SAM)** (scratch notebooks that enable it): **ρ** set per model (ViT benefits from larger ρ, e.g., **0.2**; CNN/ResNet prefer smaller, e.g., **0.02–0.05**). SAM improves **loss‑landscape smoothness** and typically **helps ViT most** on small‑/medium‑scale supervised tasks.
 - **LR schedule**: **Cosine decay with warmup** (`warmup_epochs=3–5`, `min_lr_mult=0.01`).  
 - **Gradient clipping**: `clip_grad_norm≈1.0`.  
 - **AMP**: guarded to run when CUDA is available.  
@@ -162,8 +162,8 @@ Below are the **defaults** used most often in the notebooks (tuned by architectu
 | ViT | `patch=16`, `embed_dim=384`, `depth=12`, `heads=6`, `mlp_ratio=4.0`, `drop≈0.1–0.15`, `in_chans` 1 or 3 | ~21–22M params. Larger `drop` and SAM help on small data |
 
 ### Why these choices?
-- **ViT’s data hunger.** ViT has **less image‑specific inductive bias** than CNNs and typically **relies on large‑scale pretraining or strong augmentation** when trained from scratch; otherwise ResNets often win on small datasets. fileciteturn2file15 fileciteturn2file16  
-- **SAM helps Transformers disproportionately.** Adding SAM **smooths** the loss landscape and notably **boosts ViT** when trained from scratch, to the point of **outperforming ResNets** of similar size under comparable preprocessing. fileciteturn2file0 fileciteturn2file2
+- **ViT’s data hunger.** ViT has **less image‑specific inductive bias** than CNNs and typically **relies on large‑scale pretraining or strong augmentation** when trained from scratch; otherwise ResNets often win on small datasets.
+- **SAM helps Transformers disproportionately.** Adding SAM **smooths** the loss landscape and notably **boosts ViT** when trained from scratch, to the point of **outperforming ResNets** of similar size under comparable preprocessing.
 
 ---
 
@@ -171,8 +171,8 @@ Below are the **defaults** used most often in the notebooks (tuned by architectu
 
 We run **two families** of experiments and **present results per notebook**:
 
-1. **Scratch, no SAM** – CNN and ResNet baselines are **competitive** on this small medical dataset; ViT can match but often needs careful regularization. This is **consistent with the ViT paper’s observation** that, *without large‑scale pretraining or heavy augmentation*, scratch ViT tends to trail strong CNNs. fileciteturn2file15  
-2. **Scratch, with SAM** – In our runs, **ViT + SAM** achieved **the best overall test performance** among the models trained **in this notebook**, under **both decision criteria** (threshold picked to achieve **recall ≥ 95%** and the **fixed 0.5 threshold**). This aligns with the SAM paper’s claim that smoothing the loss helps ViT the most, enabling **ViT to surpass ResNets when trained from scratch without large‑scale pretraining or strong augmentations**. fileciteturn2file0 fileciteturn2file12
+1. **Scratch, no SAM** – CNN and ResNet baselines are **competitive** on this small medical dataset; ViT can match but often needs careful regularization. This is **consistent with the ViT paper’s observation** that, *without large‑scale pretraining or heavy augmentation*, scratch ViT tends to trail strong CNNs. 
+2. **Scratch, with SAM** – In our runs, **ViT + SAM** achieved **the best overall test performance** among the models trained **in this notebook**, under **both decision criteria** (threshold picked to achieve **recall ≥ 95%** and the **fixed 0.5 threshold**). This aligns with the SAM paper’s claim that smoothing the loss helps ViT the most, enabling **ViT to surpass ResNets when trained from scratch without large‑scale pretraining or strong augmentations**. 
 
 > Each notebook concludes with **two result tables** (Recall‑first & Fixed‑0.5). Use them to compare the **three model families** side‑by‑side **within that notebook’s setting** (scratch/no‑SAM vs. scratch/with‑SAM; 1‑ch vs. 3‑ch).
 
@@ -192,8 +192,8 @@ We run **two families** of experiments and **present results per notebook**:
 
 ## References
 
-- **Vision Transformer (ViT).** Dosovitskiy et al., “**An Image is Worth 16×16 Words: Transformers for Image Recognition at Scale**,” ICLR 2021. Key points: patch embedding, class token, reduced inductive bias; ViT typically relies on large‑scale **pretraining** or **strong augmentation** to match CNNs when trained from scratch. fileciteturn2file15 fileciteturn2file16  
-- **Sharpness‑Aware Minimization (SAM) effects on ViT.** Chen, Hsieh, Gong, “**When Vision Transformers Outperform ResNets Without Pre‑training or Strong Data Augmentations**,” ICLR 2022. Key point: **smoothing the loss with SAM** markedly **improves ViT**, making it competitive or better than ResNets **when trained from scratch** under standard preprocessing. fileciteturn2file0 fileciteturn2file12
+- **Vision Transformer (ViT).** Dosovitskiy et al., “**An Image is Worth 16×16 Words: Transformers for Image Recognition at Scale**,” ICLR 2021. Key points: patch embedding, class token, reduced inductive bias; ViT typically relies on large‑scale **pretraining** or **strong augmentation** to match CNNs when trained from scratch.
+- **Sharpness‑Aware Minimization (SAM) effects on ViT.** Chen, Hsieh, Gong, “**When Vision Transformers Outperform ResNets Without Pre‑training or Strong Data Augmentations**,” ICLR 2022. Key point: **smoothing the loss with SAM** markedly **improves ViT**, making it competitive or better than ResNets **when trained from scratch** under standard preprocessing.
 
 ---
 
