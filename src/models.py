@@ -29,9 +29,14 @@ class CustomCNN(nn.Module):
       Stages: (32)->(64)->(128)
       GlobalAvgPool + 2-way head
     """
-    def __init__(self, num_classes=2, width=32, dropout=0.0):
+    # fouad change to support 1 channel start
+    def __init__(self, num_classes=2, width=32, dropout=0.0, in_chans: int = 3):
+        """
+        in_chans: allow 1-channel (grayscale) or 3-channel inputs.
+        """
         super().__init__()
-        self.stem = ConvBlock(3, width, k=3, s=1, p=1)
+        self.stem = ConvBlock(in_chans, width, k=3, s=1, p=1)
+        # fouad change to support 1 channel end
         self.stage1 = nn.Sequential(ConvBlock(width, width), ConvBlock(width, width))
         self.down1  = ConvBlock(width, width*2, s=2)
         self.stage2 = nn.Sequential(ConvBlock(width*2, width*2), ConvBlock(width*2, width*2))
@@ -51,8 +56,10 @@ class CustomCNN(nn.Module):
         x = self.stage3(x)
         return self.head(x)
 
-def build_custom_cnn(num_classes=2, width=32, dropout=0.0) -> nn.Module:
-    return CustomCNN(num_classes=num_classes, width=width, dropout=dropout)
+# fouad change to support 1 channel start
+def build_custom_cnn(num_classes=2, width=32, dropout=0.0, in_chans: int = 3) -> nn.Module:
+    return CustomCNN(num_classes=num_classes, width=width, dropout=dropout, in_chans=in_chans)
+# fouad change to support 1 channel end
 
 # --------- ResNet18 ---------
 def build_resnet18(in_chans=3, num_classes=2, pretrained=False, conv_stem=False) -> nn.Module:

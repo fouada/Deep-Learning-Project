@@ -32,6 +32,16 @@ class DataCfg:
             pass
         # fouad end change
 
+    # fouad change to support 1 channel start
+    @property
+    def in_chans(self) -> int:
+        """
+        Helper for model builders: returns 3 if we convert to RGB, else 1.
+        Keeps data & model channels aligned.
+        """
+        return 3 if self.gray_to_rgb else 1
+    # fouad change to support 1 channel end
+
 
 @dataclass
 class TrainCfg:

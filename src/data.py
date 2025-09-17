@@ -20,6 +20,13 @@ from .config import DataCfg
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
 
+# fouad change to support 1 channel start
+# For 1-channel normalization defaults, approximate luminance of ImageNet stats
+# using standard Y = 0.2989 R + 0.5870 G + 0.1140 B.
+GRAYSCALE_IMAGENET_MEAN = [0.459]
+GRAYSCALE_IMAGENET_STD  = [0.226]
+# fouad change to support 1 channel end
+
 
 class FlatImageDataset(Dataset):
     """Picklable dataset holding lists of (path, label)."""
@@ -52,31 +59,43 @@ def _compute_mean_std(paths: List[str], image_size: int, max_samples: int = 600,
     for f in files:
         try:
             im = Image.open(f)
+            # fouad change to support 1 channel start
             if gray_to_rgb:
+                # Enforce grayscale -> replicate to 3 channels for RGB models
                 im = im.convert("L").resize((image_size, image_size))
                 arr = np.array(im, dtype=np.float32) / 255.0
                 arr = np.stack([arr, arr, arr], axis=0)  # [3,H,W]
             else:
-                im = im.convert("RGB").resize((image_size, image_size))
-                arr = (np.array(im, dtype=np.float32) / 255.0).transpose(2,0,1)  # [3,H,W]
+                # True 1-channel (no replication)
+                im = im.convert("L").resize((image_size, image_size))
+                arr = (np.array(im, dtype=np.float32) / 255.0)[None, ...]  # [1,H,W]
+            # fouad change to support 1 channel end
             acc.append(arr)
         except Exception:
             pass
     if not acc:
-        return IMAGENET_MEAN, IMAGENET_STD
-    arr = np.stack(acc, axis=0)  # [N,3,H,W]
+        # fouad change to support 1 channel start
+        return (IMAGENET_MEAN, IMAGENET_STD) if gray_to_rgb else (GRAYSCALE_IMAGENET_MEAN, GRAYSCALE_IMAGENET_STD)
+        # fouad change to support 1 channel end
+    arr = np.stack(acc, axis=0)  # [N,C,H,W]
     mean = arr.mean(axis=(0,2,3)).tolist()
     std  = arr.std(axis=(0,2,3)).tolist()
     return mean, std
 
 
 def _build_transforms(image_size: int, mean, std, gray_to_rgb: bool, inception_style: bool = True):
-    rgb_or_gray = [T.Grayscale(3)] if gray_to_rgb else []
+    # fouad change to support 1 channel start
+    # Always enforce an exact channel count so Normalize() shapes match:
+    #   True -> 3 channels; False -> 1 channel.
+    enforce_channels = [T.Grayscale(3 if gray_to_rgb else 1)]
+    # fouad change to support 1 channel end
     if inception_style:
         train_tf = T.Compose([
             T.RandomResizedCrop(image_size, scale=(0.08, 1.0)),
             T.RandomHorizontalFlip(0.5),
-            *rgb_or_gray,
+            # fouad change to support 1 channel start
+            *enforce_channels,
+            # fouad change to support 1 channel end
             T.ToTensor(),
             T.Normalize(mean=mean, std=std),
         ])
@@ -84,13 +103,17 @@ def _build_transforms(image_size: int, mean, std, gray_to_rgb: bool, inception_s
         train_tf = T.Compose([
             T.Resize(256), T.CenterCrop(image_size),
             T.RandomHorizontalFlip(0.5),
-            *rgb_or_gray,
+            # fouad change to support 1 channel start
+            *enforce_channels,
+            # fouad change to support 1 channel end
             T.ToTensor(),
             T.Normalize(mean=mean, std=std),
         ])
     eval_tf = T.Compose([
         T.Resize(256), T.CenterCrop(image_size),
-        *rgb_or_gray,
+        # fouad change to support 1 channel start
+        *enforce_channels,
+        # fouad change to support 1 channel end
         T.ToTensor(),
         T.Normalize(mean=mean, std=std),
     ])
@@ -128,13 +151,15 @@ def build_dataloaders(cfg: DataCfg, device: Optional[torch.device] = None):
     paths = [p for p, _ in all_items]
     labels = [y for _, y in all_items]
 
-    # Mean/std (optional; default to ImageNet)
+    # Mean/std (optional; default to ImageNet or grayscale defaults)
     if cfg.compute_norm_stats:
         mean, std = _compute_mean_std(
             [p for p, _ in ds_train_raw.imgs], image_size=cfg.image_size, gray_to_rgb=cfg.gray_to_rgb
         )
     else:
-        mean, std = IMAGENET_MEAN, IMAGENET_STD
+        # fouad change to support 1 channel start
+        mean, std = (IMAGENET_MEAN, IMAGENET_STD) if cfg.gray_to_rgb else (GRAYSCALE_IMAGENET_MEAN, GRAYSCALE_IMAGENET_STD)
+        # fouad change to support 1 channel end
 
     train_tf, eval_tf = _build_transforms(cfg.image_size, mean, std, cfg.gray_to_rgb, inception_style=True)
 
@@ -177,5 +202,8 @@ def build_dataloaders(cfg: DataCfg, device: Optional[torch.device] = None):
         "n_test": len(ds_test),
         "mean": mean,
         "std": std,
+        # fouad change to support 1 channel start
+        "in_chans": 3 if cfg.gray_to_rgb else 1,
+        # fouad change to support 1 channel end
     }
     return train_loader, val_loader, test_loader, info
