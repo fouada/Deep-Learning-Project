@@ -196,8 +196,3 @@ We run **two families** of experiments and **present results per notebook**:
 - **Sharpness‑Aware Minimization (SAM) effects on ViT.** Chen, Hsieh, Gong, “**When Vision Transformers Outperform ResNets Without Pre‑training or Strong Data Augmentations**,” ICLR 2022. Key point: **smoothing the loss with SAM** markedly **improves ViT**, making it competitive or better than ResNets **when trained from scratch** under standard preprocessing.
 
 ---
-
-## Acknowledgements
-
-- Kaggle dataset authors and maintainers.  
-- Open‑source implementations in PyTorch, torchvision, and timm.
