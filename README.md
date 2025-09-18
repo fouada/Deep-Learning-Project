@@ -91,7 +91,7 @@ notebooks/
 - **CustomCNN (scratch)** – small baseline (≈ **0.48M** params). Stem + 3 stages, global‑avg‑pool, linear head. Good for ablations and sanity checks.
 - **ResNet‑18 (scratch / pretrained)** – standard architecture (≈ **11.2M** params). Scratch uses SGD; pretrained variant uses torchvision weights and fine‑tunes the head.
 - **Vision Transformer (ViT, scratch / pretrained)** – minimal ViT with patch embedding and Transformer encoder. Default scratch settings used in the notebooks:  
-  `img_size=224, patch=16, embed_dim=384, depth=12, heads=6, mlp_ratio=4.0 (GELU), drop≈0.1–0.15`. (≈ **21–22M** params depending on head). The pretrained variant is loaded via `timm` when available.
+  `img_size=224, patch=16, embed_dim=384, depth=12, heads=6, mlp_ratio=4.0 (GELU), drop≈0.1–0.15`. (≈ **21–22M** params depending on head). The pretrained variant is loaded via `timm` when available, in case timm is not available we fallback to npz notebooks/weights/ViT-B_16.npz
 
 ---
 
